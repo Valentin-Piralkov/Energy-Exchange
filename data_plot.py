@@ -9,7 +9,7 @@ output_png_file_path = "Data/averaged_values_plot.png"
 averaged_data = pd.read_csv(input_csv_file_path)
 
 # scale the data
-averaged_data["Wind CF"] /= 1.5
+# averaged_data["Wind CF"] *= 1.5
 
 # plot the data
 plt.plot(averaged_data["Time"], averaged_data["Full demand"], label="Demand", color="green", linestyle="-", marker="o")

@@ -1,26 +1,33 @@
 import pandas as pd
+from matplotlib import pyplot as plt
 
 # FILE PATHS:
-input_csv_file_path = "Data/Wind_solar_demand_time_series.csv"
-output_csv_file_path = "Data/averaged_values.csv"
+input_csv_file_path = "Data/normalized_data.csv"
+output_dir_path = "Data/"
 
 # Load the data
 data = pd.read_csv(input_csv_file_path)
 print(data.info())
 
-# take average of the data for each time
-averaged_data_demand = data.groupby("Time", as_index=False)["Full demand"].mean()
-averaged_data_wind = data.groupby("Time", as_index=False)["Wind CF"].mean()
-averaged_data_solar = data.groupby("Time", as_index=False)["Solar CF"].mean()
 
-# scale the data
-averaged_data_demand["Full demand"] /= 30
-averaged_data_wind["Wind CF"] /= 30
-averaged_data_solar["Solar CF"] /= 20
+def get_day_from_data(input_data, date):
+    return input_data[input_data["% Date"] == date]
 
-# merge the data
-averaged_data = pd.merge(averaged_data_demand, averaged_data_wind, on="Time")
-averaged_data = pd.merge(averaged_data, averaged_data_solar, on="Time")
 
-# save the data
-averaged_data.to_csv(output_csv_file_path, index=False)
+def plot_daily_data(input_day, date):
+    plt.plot(input_day["Time"], input_day["Full demand"], label="Load", color="green", marker="o")
+    plt.plot(input_day["Time"], input_day["Solar CF"], label="Solar", color="red", marker="o")
+    plt.plot(input_day["Time"], input_day["Wind CF"], label="Wind", color="blue", marker="o")
+    # only display every 4th x-label
+    plt.xticks(input_day["Time"][::4])
+    plt.xlabel("Time")
+    plt.ylabel("kWh")
+    plt.title(f"Daily data for {date}")
+    plt.legend()
+    plt.show()
+
+
+day = get_day_from_data(data, "03.10.2014")
+print(day)
+
+plot_daily_data(day, "01.01.2014")
