@@ -22,7 +22,7 @@ def load_data(num_agents=10):
         noise = np.random.normal(0, 0.2, len(energy_values))
         energy_matrix[i] = energy_values + noise
         # remove negative values
-        energy_matrix[i][energy_matrix[i] < 0] = 0
+        energy_matrix[i][energy_matrix[i] < 0] = 0.0001
     return np.array(energy_matrix)
 
 

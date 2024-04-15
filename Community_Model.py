@@ -8,7 +8,6 @@ from Individual_Home import Homes
 # Define constants
 NUM_AGENTS = 10
 t = 24
-x = 0.001
 battery_storage, battery_max_charge, battery_max_discharge, battery_efficiency = create_battery_matrix(NUM_AGENTS)
 
 
@@ -41,10 +40,10 @@ class Community_Model:
     def get_individual_utility_and_charging(self):
         homes = Homes(1, self.k, self.h, battery_storage, battery_max_charge, battery_max_discharge, battery_efficiency)
         homes.optimise()
-        return homes.get_utility_values(), homes.get_charging_values()
+        return homes.get_utility_values(), homes.get_charging_values(), homes.get_wasted_energy_values()
 
     def optimise(self):
-        individual_utility_values, individual_charging_values = self.get_individual_utility_and_charging()
+        individual_utility_values, individual_charging_values, individual_wasted_energy_values = self.get_individual_utility_and_charging()
 
         # Define the objective function
         obj_vars = [self.c[j, i] for i in range(t) for j in range(NUM_AGENTS)]
@@ -56,10 +55,16 @@ class Community_Model:
                 self.prob += self.p[j, i] == (self.g[j, i] - self.c[j, i] + self.d[j, i] + self.l[j, i]) / self.h[j, i]
 
         for j in range(0, NUM_AGENTS):
-            self.prob += self.q[j, 0] == 5
+            self.prob += self.q[j, 0] == 1
             for i in range(1, t):
                 self.prob += self.q[j, i] == self.q[j, i - 1] + battery_efficiency[j] * self.c[j, i - 1] - self.d[
                     j, i - 1]
+
+        for i in range(0, t):
+            self.prob += sum([self.c[j, i] for j in range(NUM_AGENTS)]) <= sum([individual_charging_values[j, i] for j
+                                                                                in range(NUM_AGENTS)])
+        for i in range(0, t):
+            self.prob += self.l_saved[i] == -(sum([self.l[j, i] for j in range(NUM_AGENTS)]))
 
         for j in range(0, NUM_AGENTS):
             for i in range(0, t):
@@ -73,14 +78,6 @@ class Community_Model:
                 self.prob += self.g[j, i] + self.w[j, i] == self.k[j, i]
                 self.prob += 0 <= self.w[j, i] <= self.k[j, i]
 
-        for i in range(0, t):
-            self.prob += sum([self.c[j, i] for j in range(NUM_AGENTS)]) <= sum([individual_charging_values[j, i] for j
-                                                                                in range(NUM_AGENTS)])
-            self.prob += sum([self.l[j, i] for j in range(NUM_AGENTS)]) + self.l_saved[i] == 0
-            self.prob += self.l_saved[i] >= 0
-
-        self.prob += 0 < x
-
         # Solve the problem
         self.prob.solve()
 
@@ -93,16 +90,32 @@ class Community_Model:
                 u += individual_utility_values[j, i]
             utility.append(u)
         self.compare_utility(utility, "Without Exchange")
+        charging = []
+        for j in range(0, NUM_AGENTS):
+            u = 0
+            for i in range(0, t):
+                u += individual_charging_values[j, i]
+            charging.append(u)
+        self.compare_charging(charging, "Without Exchange")
+        wasted_energy = []
+        for j in range(0, NUM_AGENTS):
+            u = 0
+            for i in range(0, t):
+                u += individual_wasted_energy_values[j, i]
+            wasted_energy.append(u)
+        self.compare_wasted_energy()
 
     def compare_utility(self, other_model, other_label):
         compare_models_with_bar(NUM_AGENTS, get_agent_utility(NUM_AGENTS, t, self.p), other_model, "With Exchange",
                                 other_label, "Agent Utilities", "Utility")
 
-    def display_charging(self):
-        display_agent_charging(NUM_AGENTS, t, self.c)
+    def compare_charging(self, other_model, other_label):
+        compare_models_with_bar(NUM_AGENTS, get_agent_charging(NUM_AGENTS, t, self.c), other_model, "With Exchange",
+                                other_label, "Agent Charging", "Charging")
 
-    def display_wasted_energy(self):
-        display_agent_wasted_energy(NUM_AGENTS, t, self.w)
+    def compare_wasted_energy(self):
+        compare_models_with_bar(NUM_AGENTS, get_agent_wasted_energy(NUM_AGENTS, t, self.w), get_agent_wasted_energy(
+            NUM_AGENTS, t, self.w), "With Exchange", "Without Exchange", "Agent Wasted Energy", "Wasted Energy")
 
     def display_energy_flow(self):
         # display values of l as a table
@@ -114,7 +127,14 @@ class Community_Model:
     def display_sum_energy_flow(self):
         # display the sum of l values at each time step t
         sum_l_values = [sum([self.l[j, i].varValue for j in range(NUM_AGENTS)]) for i in range(t)]
-        print(tabulate.tabulate([sum_l_values], headers=[f"Time {i}" for i in range(t)], tablefmt="fancy_grid"))
+        l_saved = [self.l_saved[i].varValue for i in range(t)]
+        print(
+            tabulate.tabulate([sum_l_values, l_saved], headers=[f"Time {i}" for i in range(t)], tablefmt="fancy_grid"))
+
+    def get_characteristic_functions(self):
+        v_c = sum([self.c[j, i].varValue for i in range(t) for j in range(NUM_AGENTS)])
+        v_e = sum([self.l_saved[i].varValue for i in range(t)])
+        return v_c, v_e
 
     def __str__(self):
         return f"Agent {self.agent_id}:\n"
@@ -123,7 +143,7 @@ class Community_Model:
 if __name__ == "__main__":
     community = Community_Model(1)
     community.optimise()
-    community.display_charging()
-    community.display_wasted_energy()
     community.display_energy_flow()
     community.display_sum_energy_flow()
+    charging, saved_energy = community.get_characteristic_functions()
+    print(f"Charging: {charging}, Saved Energy: {saved_energy}")
