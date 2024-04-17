@@ -1,21 +1,13 @@
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-from tabulate import tabulate
+from Community_Model import CommunityModel
 
-from Model.money_model import MoneyModel
+# Define Constants
+MODEL_ID = 1
+NUM_AGENT = 10
+T = 24
+DAYS = 5
+DISTANCE = 0.2
+MULTIPLIER = 2
 
-# Define constants
-NUM_AGENTS = 10
-NUM_STEPS = 5
-
-model = MoneyModel(NUM_AGENTS)
-for i in range(NUM_STEPS):
-    model.step()
-
-agent_1 = model.schedule.agents[0]
-
-print(agent_1.e)
-g_values = [agent_1.g[i].varValue for i in range(0, 24)]
-print(g_values)
+if __name__ == '__main__':
+    community_model = CommunityModel(MODEL_ID, NUM_AGENT, T)
+    community_model.run_simulation(DAYS)

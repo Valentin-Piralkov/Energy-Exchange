@@ -45,7 +45,7 @@ class Homes:
                 self.prob += self.p[j, i] == (self.g[j, i] - self.c[j, i] + self.d[j, i]) / self.h[j, i]
 
         for j in range(0, NUM_AGENTS):
-            self.prob += self.q[j, 0] == 2
+            self.prob += self.q[j, 0] == 0
             for i in range(1, t):
                 self.prob += self.q[j, i] == self.q[j, i - 1] + self.battery_efficiency[j] * self.c[j, i - 1] - self.d[
                     j, i - 1]

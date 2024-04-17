@@ -2,8 +2,11 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 
+# Set random seed
+np.random.seed(42)
+
 # File paths
-load_data_path = "Data/averaged_values.csv"
+load_data_path = "Data/normalized_data.csv"
 
 
 def load_data(num_agents=10):
@@ -108,8 +111,6 @@ def compare_models_with_bar(num_agents, plot_1, plot_2, label_1, label_2, title,
     plots two bars for each agent
     allows for comparison between two results (e.g. with and without uncertainty)
     """
-    labels = [i + 1 for i in range(0, num_agents)]
-    # display the two model results next to each other
     x = np.arange(num_agents)
     width = 0.35
     fig, ax = plt.subplots()
@@ -118,6 +119,7 @@ def compare_models_with_bar(num_agents, plot_1, plot_2, label_1, label_2, title,
     plt.xlabel("Agent")
     plt.ylabel(y_label)
     plt.title(title)
+    ax.legend(loc='upper right')
     plt.show()
 
 
@@ -199,3 +201,76 @@ def choose_generator(num_agents):
     """
     generators = ["Solar CF", "Wind CF"]
     return np.random.choice(generators, num_agents)
+
+
+def get_var_values(variables, num_agents, t):
+    """
+    return the sum of the decision variables for each agent
+    :param variables: the decision variables
+    :param num_agents: the number of agents
+    :param t: the number of time steps
+    :return: a list of the sum of the decision variables for each agent
+    """
+    variable_list = []
+    for j in range(0, num_agents):
+        u = 0
+        for i in range(0, t):
+            u += variables[j, i]
+        variable_list.append(u)
+    return variable_list
+
+
+def compare_utility(p, other_model, other_label, num_agents):
+    """
+    compare the utility values of two models
+    :param p: the utility values of the first model
+    :param other_model: the utility values of the second model
+    :param other_label: the label for the second model
+    :param num_agents: the number of agents in the two models
+    :return: display a bar chart comparing the utility values of the two models
+    """
+    compare_models_with_bar(num_agents, p, other_model, "With Exchange",
+                            other_label, "Agent Utilities", "Utility")
+
+
+def compare_charging(c, other_model, other_label, num_agents):
+    """
+    compare the charging values of two models
+    :param c: the charging values of the first model
+    :param other_model: the charging values of the second model
+    :param other_label: the label for the second model
+    :param num_agents: the number of agents in the two models
+    :return: display a bar chart comparing the charging values of the two models
+    """
+    compare_models_with_bar(num_agents, c, other_model, "With Exchange",
+                            other_label, "Agent Charging", "Charging")
+
+
+def compare_wasted_energy(w, other_model, other_label, num_agents, t):
+    """
+    compare the wasted energy values of two models
+    :param w: the wasted energy values of the first model
+    :param other_model: the wasted energy values of the second model
+    :param other_label: the label for the second model
+    :param num_agents: the number of agents in the two models
+    :param t: the number of time steps
+    :return: display a bar chart comparing the wasted energy values of the two models
+    """
+    compare_models_with_bar(num_agents, get_agent_wasted_energy(num_agents, t, w), other_model, "With Exchange",
+                            other_label, "Agent Wasted Energy", "Wasted Energy")
+
+
+def get_characteristic_functions(c, l_saved, num_agents, t):
+    """
+    return the characteristic functions of the agents
+    the first function returns the total charging values of all agents
+    the second function returns the total saved energy values of all agents
+    :param c: the charging values of the agents
+    :param l_saved: the saved energy values of the agents
+    :param num_agents: the number of agents
+    :param t: the number of time steps
+    :return: the total charging values of all agents, the total saved energy values of all agents
+    """
+    v_c = sum([c[j, i].varValue for i in range(t) for j in range(num_agents)])
+    v_e = sum([l_saved[i].varValue for i in range(t)])
+    return v_c, v_e

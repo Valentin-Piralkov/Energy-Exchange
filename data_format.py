@@ -2,7 +2,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 # FILE PATHS:
-input_csv_file_path = "Data/normalized_data.csv"
+input_csv_file_path = "Data/.csv"
 output_dir_path = "Data/"
 
 # Load the data

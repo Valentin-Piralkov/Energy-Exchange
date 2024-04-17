@@ -1,15 +1,16 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
+"""
+Plot the averaged values for a day 
+"""
+
 # FILE PATHS:
 input_csv_file_path = "Data/averaged_values.csv"
 output_png_file_path = "Data/averaged_values_plot.png"
 
 # Load the data
 averaged_data = pd.read_csv(input_csv_file_path)
-
-# scale the data
-# averaged_data["Wind CF"] *= 1.5
 
 # plot the data
 plt.plot(averaged_data["Time"], averaged_data["Full demand"], label="Demand", color="green", linestyle="-", marker="o")
