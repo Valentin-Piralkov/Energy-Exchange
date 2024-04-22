@@ -5,8 +5,8 @@ from matplotlib import pyplot as plt
 # Set random seed
 np.random.seed(42)
 
-# File paths
-load_data_path = "Data/normalized_data.csv"
+# File path
+LOAD_DATA_PATH = "Data/normalized_data.csv"
 
 
 def load_data(num_agents=10):
@@ -17,7 +17,7 @@ def load_data(num_agents=10):
     :param num_agents: number of agents
     :return: matrix of demand values for each agent (h)
     """
-    data = pd.read_csv(load_data_path)
+    data = pd.read_csv(LOAD_DATA_PATH)
     energy_values = data["Full demand"].values
     energy_matrix = np.zeros((num_agents, len(energy_values)))
     for i in range(num_agents):
@@ -37,7 +37,7 @@ def generation_data(num_agents=10):
     :param num_agents: number of agents
     :return: matrix of generation values for each agent (k)
     """
-    data = pd.read_csv(load_data_path)
+    data = pd.read_csv(LOAD_DATA_PATH)
     generation_matrix = np.zeros((num_agents, len(data)))
     generators = choose_generator(num_agents)
     for i in range(num_agents):
