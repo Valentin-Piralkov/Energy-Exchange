@@ -1,20 +1,11 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from main import DISTANCE, MULTIPLIER, DAYS
+from Env import DAYS, DISTANCE, MULTIPLIER
+from Community_Utils import get_data
 
 # Set random seed
 np.random.seed(42)
-
-# file path
-LOAD_DATA_PATH = "Data/normalized_data.csv"
-
-# test data
-data = pd.read_csv(LOAD_DATA_PATH)
-
-# split the data into test and train
-train_data = data.iloc[:int(0.8 * len(data))]
-test_data = data.iloc[int(0.8 * len(data)):]
 
 
 def get_probability_distribution(df, col_name):
@@ -49,6 +40,7 @@ def get_probability_distribution(df, col_name):
 def weight_multiplier(value, dist=0.2, multiplier=2, second_multiplier=1):
     """
     Weight multiplier function
+    :param second_multiplier:
     :param value: the probability index to be weighted
     :param dist: the distance threshold
     :param multiplier: the weight multiplier
@@ -98,6 +90,7 @@ def predict_next_day_wind(probability_dict, previous_value):
     """
     Choose a value based on the probability distribution
     Take into account the previous value and adjust the probabilities accordingly
+    :param previous_value:
     :param probability_dict:
     :return: a chosen value based on the adjusted probability distribution
     """
@@ -118,6 +111,8 @@ def predict_next_day_wind(probability_dict, previous_value):
 
 
 if __name__ == '__main__':
+    train_data, test_data = get_data()
+
     probabilities_solar = get_probability_distribution(test_data, "Solar CF")
     probabilities_wind = get_probability_distribution(test_data, "Wind CF")
     probabilities_demand = get_probability_distribution(test_data, "Full demand")

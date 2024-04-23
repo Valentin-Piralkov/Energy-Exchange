@@ -1,23 +1,32 @@
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
+from Env import LOAD_DATA_PATH
 
-# Set random seed
 np.random.seed(42)
 
-# File path
-LOAD_DATA_PATH = "Data/normalized_data.csv"
+def get_data(split=0.8):
+    """
+    Load the demand and generation data from the csv file
+    :return: the demand and generation data
+    """
+    data = pd.read_csv(LOAD_DATA_PATH)
+    # split the data into test and train
+    train_data = data.iloc[:int(split * len(data))]
+    test_data = data.iloc[int(split * len(data)):]
+
+    return train_data, test_data
 
 
-def load_data(num_agents=10):
+def load_data(data, num_agents=10):
     """
     Load the demand data from the csv file
     create a list of demand values for each agent
     add random noise to each agent's demand values
+    :param data:
     :param num_agents: number of agents
     :return: matrix of demand values for each agent (h)
     """
-    data = pd.read_csv(LOAD_DATA_PATH)
     energy_values = data["Full demand"].values
     energy_matrix = np.zeros((num_agents, len(energy_values)))
     for i in range(num_agents):
@@ -29,17 +38,17 @@ def load_data(num_agents=10):
     return np.array(energy_matrix)
 
 
-def generation_data(num_agents=10):
+def generation_data(data, generators, num_agents=10):
     """
     Load the generation data from the csv file
     create a list of generation values for each agent
     add random noise to each agent's generation values
+    :param generators:
+    :param data:
     :param num_agents: number of agents
     :return: matrix of generation values for each agent (k)
     """
-    data = pd.read_csv(LOAD_DATA_PATH)
     generation_matrix = np.zeros((num_agents, len(data)))
-    generators = choose_generator(num_agents)
     for i in range(num_agents):
         generator_name = generators[i]
         energy_values = data[generator_name].values
@@ -105,7 +114,7 @@ def get_agent_wasted_energy(num_agents, t, w):
     return wasted_energy
 
 
-def compare_models_with_bar(num_agents, plot_1, plot_2, label_1, label_2, title, y_label):
+def compare_models_with_bar(num_agents, plot_1, plot_2, label_1, label_2, title, y_label, file_name=None):
     """
     display a bar chart comparing two models
     plots two bars for each agent
@@ -120,6 +129,8 @@ def compare_models_with_bar(num_agents, plot_1, plot_2, label_1, label_2, title,
     plt.ylabel(y_label)
     plt.title(title)
     ax.legend(loc='upper right')
+    if file_name:
+        plt.savefig(file_name)
     plt.show()
 
 
@@ -200,7 +211,9 @@ def choose_generator(num_agents):
     :return: list of generator names for each agent
     """
     generators = ["Solar CF", "Wind CF"]
-    return np.random.choice(generators, num_agents)
+    # randomly choose between solar and wind, solar has greater probability
+    generator_choices = np.random.choice(generators, num_agents, p=[0.5, 0.5])
+    return generator_choices
 
 
 def get_var_values(variables, num_agents, t):
@@ -220,20 +233,21 @@ def get_var_values(variables, num_agents, t):
     return variable_list
 
 
-def compare_utility(p, other_model, other_label, num_agents):
+def compare_utility(p, other_model, label, other_label, num_agents, file_name=None):
     """
     compare the utility values of two models
+    :param label:
     :param p: the utility values of the first model
     :param other_model: the utility values of the second model
     :param other_label: the label for the second model
     :param num_agents: the number of agents in the two models
     :return: display a bar chart comparing the utility values of the two models
     """
-    compare_models_with_bar(num_agents, p, other_model, "With Exchange",
-                            other_label, "Agent Utilities", "Utility")
+    compare_models_with_bar(num_agents, p, other_model, label,
+                            other_label, "Agent Utilities", "Utility", file_name)
 
 
-def compare_charging(c, other_model, other_label, num_agents):
+def compare_charging(c, other_model, label, other_label, num_agents, file_name=None):
     """
     compare the charging values of two models
     :param c: the charging values of the first model
@@ -242,11 +256,11 @@ def compare_charging(c, other_model, other_label, num_agents):
     :param num_agents: the number of agents in the two models
     :return: display a bar chart comparing the charging values of the two models
     """
-    compare_models_with_bar(num_agents, c, other_model, "With Exchange",
-                            other_label, "Agent Charging", "Charging")
+    compare_models_with_bar(num_agents, c, other_model, label,
+                            other_label, "Agent Charging", "Charging", file_name)
 
 
-def compare_wasted_energy(w, other_model, other_label, num_agents, t):
+def compare_wasted_energy(w, other_model, label, other_label, num_agents, t, file_name=None):
     """
     compare the wasted energy values of two models
     :param w: the wasted energy values of the first model
@@ -256,8 +270,8 @@ def compare_wasted_energy(w, other_model, other_label, num_agents, t):
     :param t: the number of time steps
     :return: display a bar chart comparing the wasted energy values of the two models
     """
-    compare_models_with_bar(num_agents, get_agent_wasted_energy(num_agents, t, w), other_model, "With Exchange",
-                            other_label, "Agent Wasted Energy", "Wasted Energy")
+    compare_models_with_bar(num_agents, get_agent_wasted_energy(num_agents, t, w), other_model, label,
+                            other_label, "Agent Wasted Energy", "Wasted Energy", file_name)
 
 
 def get_characteristic_functions(c, l_saved, num_agents, t):

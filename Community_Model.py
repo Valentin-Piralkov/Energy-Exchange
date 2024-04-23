@@ -1,22 +1,24 @@
 import numpy as np
 import pulp
 
-from Community_Utils import load_data, \
-    create_battery_matrix, generation_data, get_agent_utility, get_agent_charging, \
-    get_var_values, get_characteristic_functions, compare_utility, compare_charging
+from Community_Utils import get_agent_utility, get_agent_charging, get_characteristic_functions, get_var_values
 from Individual_Home import Homes
-from Shapley import calculate_shapley_values, display_shapley_values
+from Probability_Distribution import predict_next_day, predict_next_day_wind
+from Shapley import calculate_shapley_values
 
 
 class CommunityModel:
-    def __init__(self, model_id, num_agent=10, t=24):
+    def __init__(self, model_id, battery_storage, battery_max_charge, battery_max_discharge, battery_efficiency,
+                 num_agent, t):
         self.model_id = model_id
         self.num_agent = num_agent
         self.agent_ids = [i for i in range(1, num_agent + 1)]
         self.t = t
         self.q_values = np.zeros(num_agent)
-        self.battery_storage, self.battery_max_charge, self.battery_max_discharge, self.battery_efficiency = (
-            create_battery_matrix(num_agent))
+        self.battery_storage = battery_storage
+        self.battery_max_charge = battery_max_charge
+        self.battery_max_discharge = battery_max_discharge
+        self.battery_efficiency = battery_efficiency
 
     def get_individual_utility_and_charging(self, k, h):
         homes = Homes(1, k, h, self.battery_storage, self.battery_max_charge, self.battery_max_discharge,
@@ -96,35 +98,98 @@ class CommunityModel:
 
         return p, c, l_saved, individual_utility_values, individual_charging_values
 
-    def run_simulation(self, days=5):
-        k = generation_data(self.num_agent)
-        h = load_data(self.num_agent)
+    def run_simulation(self, k, h, days=30):
+
+        # define arrays to store the mean values
         mean_utility = np.zeros(self.num_agent)
         mean_charging = np.zeros(self.num_agent)
-        mean_utility_exchange = np.zeros(self.num_agent)
-        mean_charging_exchange = np.zeros(self.num_agent)
+
         shapely_values = None
-        for day in range(days):
+
+        # iterate through the days
+        for day in range(1, days + 1):
             # take a 24hour slice of the data
             k_day = k[:, day * self.t:day * self.t + self.t]
             h_day = h[:, day * self.t:day * self.t + self.t]
-            p, c, l_saved, individual_utility_values, individual_charging_values = self.optimise(k_day, h_day)
-            mean_utility += get_var_values(individual_utility_values, self.num_agent, self.t)
-            mean_charging += get_var_values(individual_charging_values, self.num_agent, self.t)
-            mean_utility_exchange += get_agent_utility(self.num_agent, self.t, p)
-            mean_charging_exchange += get_agent_charging(self.num_agent, self.t, c)
+
+            # optimize the model for the actual and predicted data
+            p, c, l_saved, _, _ = self.optimise(k_day, h_day)
+
+            # get the utility and charging values
+            mean_utility += get_agent_utility(self.num_agent, self.t, p)
+            mean_charging += get_agent_charging(self.num_agent, self.t, c)
+
+            # get the characteristic functions
             optimal_charging, saved_energy = get_characteristic_functions(c, l_saved, self.num_agent, self.t)
+
+            # display the results
             print(f"Charging: {optimal_charging}, Saved Energy: {saved_energy}")
             shapely_values = self.get_shapely_values(c)
             print(f"Shapley Values: {np.sum(shapely_values)}")
-            print(f"Day {day + 1} completed")
+            print(f"Day {day} completed")
+            if day != days:
+                print()
+                print("--------------------------------------------------")
+                print()
 
+        # calculate the mean values
         mean_utility /= days
         mean_charging /= days
-        mean_utility_exchange /= days
-        mean_charging_exchange /= days
 
-        compare_utility(mean_utility_exchange, mean_utility, "Without Exchange", self.num_agent)
-        compare_charging(mean_charging_exchange, mean_charging, "Without Exchange", self.num_agent)
+        return mean_utility, mean_charging, shapely_values
 
-        display_shapley_values(self.agent_ids, shapely_values, self.battery_storage)
+    def run_simulation_with_uncertainty(self, k, h, generators, prob_solar, prob_wind, days=30):
+        # define arrays to store the mean values
+        mean_utility = np.zeros(self.num_agent)
+        mean_charging = np.zeros(self.num_agent)
+        mean_utility_individual = np.zeros(self.num_agent)
+        mean_charging_individual = np.zeros(self.num_agent)
+        shapley_values = None
+
+        # iterate through the days
+        for day in range(1, days + 1):
+            # take a 24hour slice of the data
+            h_day = h[:, day * self.t:day * self.t + self.t]
+            # k_day_actual = k[:, day * self.t:day * self.t + self.t]
+
+            # predict the next day
+            k_day_predicted = []
+            for i in range(self.num_agent):
+                previous_day = k[i, (day - 1) * self.t:day * self.t]
+                if generators[i] == "Solar CF":
+                    k_day_predicted.append(predict_next_day(prob_solar, previous_day))
+                elif generators[i] == "Wind CF":
+                    k_day_predicted.append(predict_next_day_wind(prob_wind, previous_day[-1]))
+                else:
+                    raise ValueError("Invalid generator")
+            k_day_predicted = np.array(k_day_predicted)
+
+            # optimize the model for the actual and predicted data
+            p, c, l_saved, individual_p, individual_c = self.optimise(k_day_predicted, h_day)
+
+            # get the utility and charging values
+            mean_utility += get_agent_utility(self.num_agent, self.t, p)
+            mean_charging += get_agent_charging(self.num_agent, self.t, c)
+            mean_utility_individual += get_var_values(individual_p, self.num_agent, self.t)
+            mean_charging_individual += get_var_values(individual_c, self.num_agent, self.t)
+
+            # get the characteristic functions
+            optimal_charging, saved_energy = get_characteristic_functions(c, l_saved, self.num_agent, self.t)
+
+            # display the results
+            print(f"Charging: {optimal_charging}, Saved Energy: {saved_energy}")
+            shapley_values = self.get_shapely_values(c)
+            print(f"Shapley Values: {np.sum(shapley_values)}")
+            print(f"Day {day} completed")
+            if day != days:
+                print()
+                print("--------------------------------------------------")
+                print()
+
+        # calculate the mean values
+        mean_utility /= days
+        mean_charging /= days
+        mean_utility_individual /= days
+        mean_charging_individual /= days
+
+        return mean_utility, mean_charging, shapley_values, mean_utility_individual, mean_charging_individual
