@@ -5,6 +5,7 @@ from Env import LOAD_DATA_PATH
 
 np.random.seed(42)
 
+
 def get_data(split=0.8):
     """
     Load the demand and generation data from the csv file
@@ -210,7 +211,7 @@ def choose_generator(num_agents):
     :param num_agents: number of agents
     :return: list of generator names for each agent
     """
-    generators = ["Solar CF", "Wind CF"]
+    generators = ["Solar", "Wind"]
     # randomly choose between solar and wind, solar has greater probability
     generator_choices = np.random.choice(generators, num_agents, p=[0.5, 0.5])
     return generator_choices
@@ -244,7 +245,7 @@ def compare_utility(p, other_model, label, other_label, num_agents, file_name=No
     :return: display a bar chart comparing the utility values of the two models
     """
     compare_models_with_bar(num_agents, p, other_model, label,
-                            other_label, "Agent Utilities", "Utility", file_name)
+                            other_label, "Agent Mean Utilities", "Utility", file_name)
 
 
 def compare_charging(c, other_model, label, other_label, num_agents, file_name=None):
@@ -257,10 +258,10 @@ def compare_charging(c, other_model, label, other_label, num_agents, file_name=N
     :return: display a bar chart comparing the charging values of the two models
     """
     compare_models_with_bar(num_agents, c, other_model, label,
-                            other_label, "Agent Charging", "Charging", file_name)
+                            other_label, "Agent Mean Charging", "Charging (kWh)", file_name)
 
 
-def compare_wasted_energy(w, other_model, label, other_label, num_agents, t, file_name=None):
+def compare_wasted_energy(w, other_model, label, other_label, num_agents, file_name=None):
     """
     compare the wasted energy values of two models
     :param w: the wasted energy values of the first model
@@ -270,11 +271,11 @@ def compare_wasted_energy(w, other_model, label, other_label, num_agents, t, fil
     :param t: the number of time steps
     :return: display a bar chart comparing the wasted energy values of the two models
     """
-    compare_models_with_bar(num_agents, get_agent_wasted_energy(num_agents, t, w), other_model, label,
-                            other_label, "Agent Wasted Energy", "Wasted Energy", file_name)
+    compare_models_with_bar(num_agents, w, other_model, label,
+                            other_label, "Agent Mean Savings", "Energy Savings (kWh)", file_name)
 
 
-def get_characteristic_functions(c, l_saved, num_agents, t):
+def get_characteristic_functions(c, l_saved, u, num_agents, t):
     """
     return the characteristic functions of the agents
     the first function returns the total charging values of all agents
@@ -286,5 +287,60 @@ def get_characteristic_functions(c, l_saved, num_agents, t):
     :return: the total charging values of all agents, the total saved energy values of all agents
     """
     v_c = sum([c[j, i].varValue for i in range(t) for j in range(num_agents)])
-    v_e = sum([l_saved[i].varValue for i in range(t)])
-    return v_c, v_e
+    v_e = sum([l_saved[i].varValue for i in range(t)]) / 10  # normalize the saved energy
+    v_u = sum([u[j, i].varValue for i in range(t) for j in range(num_agents)])
+    return v_c, v_e, v_u
+
+
+def compare_models_with_plot(plot_1, plot_2, label_1, label_2, title, x_label, y_label, file_name=None):
+    """
+    display a line chart comparing two models
+    plots two lines for each agent
+    allows for comparison between two results (e.g. with and without uncertainty)
+    """
+    # add custom x labels
+
+    plt.plot(plot_1, label=label_1)
+    plt.xticks(range(len(plot_1)), [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
+    if plot_2 is not None:
+        plt.plot(plot_2, label=label_2)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(title)
+    if plot_2 is not None:
+        plt.legend()
+    if file_name:
+        plt.savefig(file_name)
+    plt.show()
+
+def show_saved_energy(l_saved_1, label_1, days, file_name=None):
+    """
+    calculates the daily saved energy (24h) for each agent
+    plots the saved energy for each agent in a bar chart
+    """
+    labels = [(i + 1) for i in range(0, days)]
+    plt.bar(labels, l_saved_1)
+    plt.xlabel("Days")
+    plt.ylabel("Saved Energy (kWh)")
+    plt.title("Daily Saved Energy")
+    if file_name:
+        plt.savefig(file_name)
+    plt.show()
+
+def display_bar_chart(data, title, x_label, y_label, file_name=None):
+    """
+    display a bar chart
+    :param data: the data to display
+    :param title: the title of the chart
+    :param x_label: the x-axis label
+    :param y_label: the y-axis label
+    :param file_name: the name of the file to save the chart to
+    """
+    labels = [i + 1 for i in range(0, len(data))]
+    plt.bar(labels, data)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(title)
+    if file_name:
+        plt.savefig(file_name)
+    plt.show()

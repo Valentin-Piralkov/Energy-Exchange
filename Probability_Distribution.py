@@ -17,9 +17,9 @@ def get_probability_distribution(df, col_name):
     """
     # make an array of values for each time step
     time_values = {}
-    for i in range(len(df)):
-        t = df.iloc[i]["Time"]
-        value = df.iloc[i][col_name]
+    for j in range(len(df)):
+        t = df.iloc[j]["Time"]
+        value = df.iloc[j][col_name]
         if t not in time_values:
             time_values[t] = []
         time_values[t].append(value)
@@ -56,6 +56,8 @@ def predict_next_day(probability_dict, previous_day, is_weighted=True):
     """
     Choose a value based on the probability distribution
     Take into account the previous value and adjust the probabilities accordingly
+    :param is_weighted:
+    :param previous_day:
     :param probability_dict:
     :return: a chosen value based on the adjusted probability distribution
     """
@@ -70,14 +72,14 @@ def predict_next_day(probability_dict, previous_day, is_weighted=True):
 
     # get the distances between the probabilities and the previous values
     distances = {}
-    i = 0
+    j = 0
     for t, prob in probability_dict.items():
-        distances[t] = [abs(value - previous_day[i]) for value in prob.index]
-        i += 1
+        distances[t] = [abs(value - previous_day[j]) for value in prob.index]
+        j += 1
 
     # choose a value based on the weighted probabilities
     for t, prob in probability_dict.items():
-        weights = [weight_multiplier(dist, DISTANCE, 30) for dist in distances[t]]
+        weights = [weight_multiplier(dist, 0.2, 50) for dist in distances[t]]
         weighted_prob = prob * weights
         weighted_prob = weighted_prob / weighted_prob.sum()
         next_value = np.random.choice(weighted_prob.index, p=weighted_prob.values)
@@ -95,12 +97,11 @@ def predict_next_day_wind(probability_dict, previous_value):
     :return: a chosen value based on the adjusted probability distribution
     """
     next_day = []
-    previous_value = previous_value.round(2)
 
     # predict the next time step
     for t, prob in probability_dict.items():
         distances = [abs(value - previous_value) for value in prob.index]
-        weights = [weight_multiplier(dist, DISTANCE, MULTIPLIER, second_multiplier=0) for dist in distances]
+        weights = [weight_multiplier(dist, 0.1, 30, second_multiplier=0) for dist in distances]
         weighted_prob = prob * weights
         weighted_prob = weighted_prob / weighted_prob.sum()
         next_value = np.random.choice(weighted_prob.index, p=weighted_prob.values)
@@ -113,11 +114,11 @@ def predict_next_day_wind(probability_dict, previous_value):
 if __name__ == '__main__':
     train_data, test_data = get_data()
 
-    probabilities_solar = get_probability_distribution(test_data, "Solar CF")
-    probabilities_wind = get_probability_distribution(test_data, "Wind CF")
+    probabilities_solar = get_probability_distribution(test_data, "Solar")
+    probabilities_wind = get_probability_distribution(test_data, "Wind")
     probabilities_demand = get_probability_distribution(test_data, "Full demand")
-    previous_day_solar = train_data.tail(24)["Solar CF"].values
-    previous_day_wind = train_data.tail(24)["Wind CF"].values
+    previous_day_solar = train_data.tail(24)["Solar"].values
+    previous_day_wind = train_data.tail(24)["Wind"].values
     previous_day_demand = train_data.tail(24)["Full demand"].values
 
     mse_list_solar = []
@@ -134,13 +135,14 @@ if __name__ == '__main__':
     actual_day_demand = None
 
     for i in range(DAYS):
+
         # predict the next day
         next_day_solar = predict_next_day(probabilities_solar, previous_day_solar)
         next_day_wind = predict_next_day_wind(probabilities_wind, previous_day_wind[-1])
         next_day_demand = predict_next_day(probabilities_demand, previous_day_demand)
         # get the actual day
-        actual_day_solar = test_data.iloc[i * 24:(i + 1) * 24]["Solar CF"].values
-        actual_day_wind = test_data.iloc[i * 24:(i + 1) * 24]["Wind CF"].values
+        actual_day_solar = test_data.iloc[i * 24:(i + 1) * 24]["Solar"].values
+        actual_day_wind = test_data.iloc[i * 24:(i + 1) * 24]["Wind"].values
         actual_day_demand = test_data.iloc[i * 24:(i + 1) * 24]["Full demand"].values
         # update the previous day
         previous_day_solar = actual_day_solar
@@ -163,25 +165,29 @@ if __name__ == '__main__':
     hourly_wind = hourly_wind / DAYS
     hourly_demand = hourly_demand / DAYS
 
+    print("Mean Squared Error for Solar Generation: ", np.mean(mse_list_solar))
+    print("Mean Squared Error for Wind Generation: ", np.mean(mse_list_wind))
+    print("Mean Squared Error for Consumption: ", np.mean(mse_list_demand))
+
     # plot the mean squared error per hour
-    plt.plot(hourly_mse_solar, label="Solar CF")
-    plt.plot(hourly_wind, label="Wind CF")
+    plt.plot(hourly_mse_solar, label="Solar")
+    plt.plot(hourly_wind, label="Wind")
     plt.plot(hourly_demand, label="Full demand")
-    plt.xlabel("Time")
+    plt.xlabel("Time (h)")
     plt.ylabel("Mean Squared Error")
     plt.title("Hourly Mean Squared Error")
-    plt.legend()
+    plt.legend(loc="upper left")
     plt.savefig("Plots/Hourly_Mean_Squared_Error.png")
     plt.show()
 
     # plot the mean squared error
-    plt.plot(mse_list_solar, label="Solar CF")
-    plt.plot(mse_list_wind, label="Wind CF")
-    plt.plot(mse_list_demand, label="Full demand")
+    plt.plot(mse_list_solar, label="Solar")
+    plt.plot(mse_list_wind, label="Wind")
+    plt.plot(mse_list_demand, label="Consumption")
     plt.xlabel("Day")
     plt.ylabel("Mean Squared Error")
-    plt.title("Mean Squared Error for Solar CF, Wind CF and Full Demand")
-    plt.legend()
+    plt.title("Mean Squared Error for Generation and Consumption Predictions")
+    plt.legend(loc="upper left")
     plt.savefig("Plots/Mean_Squared_Error.png")
     plt.show()
 
@@ -191,57 +197,61 @@ if __name__ == '__main__':
     fig, ax = plt.subplots()
     ax.bar(x - width / 2, actual_day_solar, width, label="Actual")
     ax.bar(x + width / 2, next_day_solar, width, label="Predicted")
-    plt.xlabel("Time")
-    plt.ylabel("Solar CF")
-    plt.title("Actual vs Predicted Solar CF")
-    plt.legend()
+    plt.xlabel("Time (h)")
+    plt.ylabel("Solar Generation (kWh)")
+    plt.title("Actual vs Predicted Solar Generation")
+    plt.legend(loc="upper left")
     plt.savefig("Plots/Actual_vs_Predicted_Solar_CF.png")
     plt.show()
 
+    # noinspection PyRedeclaration
     fig, ax = plt.subplots()
     ax.bar(x - width / 2, actual_day_wind, width, label="Actual")
     ax.bar(x + width / 2, next_day_wind, width, label="Predicted")
-    plt.xlabel("Time")
-    plt.ylabel("Wind CF")
-    plt.title("Actual vs Predicted Wind CF")
-    plt.legend()
+    plt.xlabel("Time (h)")
+    plt.ylabel("Wind Generation (kWh)")
+    plt.title("Actual vs Predicted Wind Generation")
+    plt.legend(loc="upper left")
     plt.savefig("Plots/Actual_vs_Predicted_Wind_CF.png")
     plt.show()
 
+    # noinspection PyRedeclaration
     fig, ax = plt.subplots()
     ax.bar(x - width / 2, actual_day_demand, width, label="Actual")
     ax.bar(x + width / 2, next_day_demand, width, label="Predicted")
-    plt.xlabel("Time")
-    plt.ylabel("Full demand")
-    plt.title("Actual vs Predicted Full Demand")
-    plt.legend()
+    plt.xlabel("Time (h)")
+    plt.ylabel("Consumption (kWh)")
+    plt.title("Actual vs Predicted Consumption")
+    plt.legend(loc="upper left")
     plt.savefig("Plots/Actual_vs_Predicted_Full_Demand.png")
     plt.show()
 
     # plot the actual vs predicted values with line chart
     plt.plot(actual_day_solar, label="Actual")
     plt.plot(next_day_solar, label="Predicted")
-    plt.xlabel("Time")
-    plt.ylabel("Solar CF")
-    plt.title("Actual vs Predicted Solar CF")
-    plt.legend()
+    plt.xlabel("Time (h)")
+    plt.ylabel("Solar Generation (kWh)")
+    plt.title("Actual vs Predicted Solar Generation")
+    plt.legend(loc="upper left")
     plt.savefig("Plots/Actual_vs_Predicted_Solar_CF_Line.png")
     plt.show()
 
     plt.plot(actual_day_wind, label="Actual")
     plt.plot(next_day_wind, label="Predicted")
-    plt.xlabel("Time")
-    plt.ylabel("Wind CF")
-    plt.title("Actual vs Predicted Wind CF")
-    plt.legend()
+    plt.ylim(bottom=0)
+    plt.xlabel("Time (h)")
+    plt.ylabel("Wind Generation (kWh)")
+    plt.title("Actual vs Predicted Wind Generation")
+    plt.legend(loc="lower left")
     plt.savefig("Plots/Actual_vs_Predicted_Wind_CF_Line.png")
     plt.show()
 
     plt.plot(actual_day_demand, label="Actual")
     plt.plot(next_day_demand, label="Predicted")
-    plt.xlabel("Time")
-    plt.ylabel("Full demand")
-    plt.title("Actual vs Predicted Full Demand")
-    plt.legend()
+    plt.ylim(bottom=0)
+    plt.xlabel("Time (h)")
+    plt.ylabel("Consumption (kWh)")
+    plt.title("Actual vs Predicted Consumption")
+    plt.legend(loc="lower left")
     plt.savefig("Plots/Actual_vs_Predicted_Full_Demand_Line.png")
     plt.show()

@@ -1,12 +1,23 @@
-import itertools
+from itertools import permutations
 import random
 import numpy as np
 from matplotlib import pyplot as plt
 
 
-def calculate_permutations(agents):
-    p = list(itertools.permutations(agents))
-    return p
+def calculate_permutations(agents, limit=121):
+    perms = []
+    if len(agents) > 10:
+        samples = len(agents) * limit
+        print(f"Calculating {samples} permutations")
+
+        for permutation in permutations(agents):
+            perms.append(permutation)
+            if len(perms) >= samples:
+                break
+    else:
+        for permutation in permutations(agents):
+            perms.append(permutation)
+    return perms
 
 
 def calculate_predecessors(p, agent):

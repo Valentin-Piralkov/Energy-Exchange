@@ -4,5 +4,5 @@ NUM_AGENT = 10
 T = 24
 DAYS = 120
 DISTANCE = 0.2
-MULTIPLIER = 20
-LOAD_DATA_PATH = "Data/normalized_data.csv"
+MULTIPLIER = 30
+LOAD_DATA_PATH = "Data/2014_2015_data_scaled.csv"
