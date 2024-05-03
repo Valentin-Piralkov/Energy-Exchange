@@ -237,7 +237,8 @@ def get_var_values(variables, num_agents, t):
 def compare_utility(p, other_model, label, other_label, num_agents, file_name=None):
     """
     compare the utility values of two models
-    :param label:
+    :param file_name: name of the file to save the chart to
+    :param label: the label for the first model
     :param p: the utility values of the first model
     :param other_model: the utility values of the second model
     :param other_label: the label for the second model
@@ -251,6 +252,8 @@ def compare_utility(p, other_model, label, other_label, num_agents, file_name=No
 def compare_charging(c, other_model, label, other_label, num_agents, file_name=None):
     """
     compare the charging values of two models
+    :param file_name: name of the file to save the chart to
+    :param label: the label for the first model
     :param c: the charging values of the first model
     :param other_model: the charging values of the second model
     :param other_label: the label for the second model
@@ -264,11 +267,12 @@ def compare_charging(c, other_model, label, other_label, num_agents, file_name=N
 def compare_wasted_energy(w, other_model, label, other_label, num_agents, file_name=None):
     """
     compare the wasted energy values of two models
+    :param file_name: name of the file to save the chart to
+    :param label: the label for the first model
     :param w: the wasted energy values of the first model
     :param other_model: the wasted energy values of the second model
     :param other_label: the label for the second model
     :param num_agents: the number of agents in the two models
-    :param t: the number of time steps
     :return: display a bar chart comparing the wasted energy values of the two models
     """
     compare_models_with_bar(num_agents, w, other_model, label,
@@ -280,6 +284,7 @@ def get_characteristic_functions(c, l_saved, u, num_agents, t):
     return the characteristic functions of the agents
     the first function returns the total charging values of all agents
     the second function returns the total saved energy values of all agents
+    :param u: utility values of the agents
     :param c: the charging values of the agents
     :param l_saved: the saved energy values of the agents
     :param num_agents: the number of agents
@@ -313,6 +318,7 @@ def compare_models_with_plot(plot_1, plot_2, label_1, label_2, title, x_label, y
         plt.savefig(file_name)
     plt.show()
 
+
 def show_saved_energy(l_saved_1, label_1, days, file_name=None):
     """
     calculates the daily saved energy (24h) for each agent
@@ -326,6 +332,7 @@ def show_saved_energy(l_saved_1, label_1, days, file_name=None):
     if file_name:
         plt.savefig(file_name)
     plt.show()
+
 
 def display_bar_chart(data, title, x_label, y_label, file_name=None):
     """

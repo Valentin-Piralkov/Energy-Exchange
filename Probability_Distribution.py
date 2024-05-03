@@ -79,7 +79,7 @@ def predict_next_day(probability_dict, previous_day, is_weighted=True):
 
     # choose a value based on the weighted probabilities
     for t, prob in probability_dict.items():
-        weights = [weight_multiplier(dist, 0.2, 50) for dist in distances[t]]
+        weights = [weight_multiplier(dist, DISTANCE, MULTIPLIER) for dist in distances[t]]
         weighted_prob = prob * weights
         weighted_prob = weighted_prob / weighted_prob.sum()
         next_value = np.random.choice(weighted_prob.index, p=weighted_prob.values)
@@ -101,7 +101,7 @@ def predict_next_day_wind(probability_dict, previous_value):
     # predict the next time step
     for t, prob in probability_dict.items():
         distances = [abs(value - previous_value) for value in prob.index]
-        weights = [weight_multiplier(dist, 0.1, 30, second_multiplier=0) for dist in distances]
+        weights = [weight_multiplier(dist, DISTANCE - 0.1, MULTIPLIER, second_multiplier=0) for dist in distances]
         weighted_prob = prob * weights
         weighted_prob = weighted_prob / weighted_prob.sum()
         next_value = np.random.choice(weighted_prob.index, p=weighted_prob.values)

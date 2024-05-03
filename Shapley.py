@@ -5,6 +5,12 @@ from matplotlib import pyplot as plt
 
 
 def calculate_permutations(agents, limit=121):
+    """
+    Calculates all possible permutations for a set of agents
+    :param agents: list of agents
+    :param limit: when the number of agents is greater than 10, limit the number of permutations to calculate
+    :return: list of permutations
+    """
     perms = []
     if len(agents) > 10:
         samples = len(agents) * limit
@@ -21,6 +27,12 @@ def calculate_permutations(agents, limit=121):
 
 
 def calculate_predecessors(p, agent):
+    """
+    Calculates the predecessors of an agent in a permutation
+    :param p: the permutation
+    :param agent: current agent
+    :return: predecessors of the agent in the permutation
+    """
     pred = []
     for i in range(len(p)):
         pred.append(p[i])
@@ -30,6 +42,14 @@ def calculate_predecessors(p, agent):
 
 
 def calculate_contribution(pred, agent, c, t):
+    """
+    Calculates the contribution of an agent in a permutation
+    :param pred: the predecessors of the agent
+    :param agent: the current agent
+    :param c: charging or saved energy values
+    :param t: time steps
+    :return: contribution of the agent
+    """
     pred_i = pred + [agent]
     if len(pred) == 0:
         return 0
@@ -40,6 +60,14 @@ def calculate_contribution(pred, agent, c, t):
 
 
 def calculate_shapley_values(m, n, c, t):
+    """
+    Calculates the Shapley values for a set of agents
+    :param m: loop count
+    :param n: number of agents
+    :param c: characteristics function
+    :param t: time steps
+    :return: Shapley values
+    """
     agents = [i for i in range(n)]
     perms = calculate_permutations(agents)
     count = 0
